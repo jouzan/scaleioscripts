@@ -1,0 +1,241 @@
+﻿<html>
+<title>SIO COMMANDS </title>
+
+<body>
+
+<center>
+
+
+
+root@192.168.1.162 'bash -s' < UnInstallSIO.sh
+
+vi /opt/emc/scaleio/lia/cfg/installation_id.txt
+pkill lia     <= restart lia 
+ping -M do -s 8972 10.10.20.221
+
+Switch cluster roles = 
+Configure Management Controll IP = 
+Configure SDS to SDS IP =
+Configure SDC to SDS IP = 
+
+
+Rename SDS SDC SYSTEM = 
+         scli --rename_sds --sds_ip 172.31.70.225 --new_name sds05
+	 scli --rename_sdc --sdc_ip 172.31.70.193 --new_name ORA002
+	 scli --rename_system --new_name SIO001
+
+
+
+Show events = 
+    /opt/emc/scaleio/mdm/bin/showevents.py
+
+
+Configure READ RAM cache = 
+    scli --disable_sds_rmcache --sds_ip 172.31.70.225
+    scli --set_sds_rmcache_size --sds_ip 172.31.70.225 --rmcache_size_mb 16
+    scli --set_performance_parameters  --all_sds --all_sdc --apply_to_mdm --profile high_performance
+
+############################################################################################
+#ALL Flash tuning 
+#
+################################################################################################
+echo noop > /sys/block/sdb/queue/scheduler
+echo noop > /sys/block/sde/queue/scheduler
+echo noop > /sys/block/sdd/queue/scheduler
+echo noop > /sys/block/sdc/queue/scheduler
+echo noop > /sys/block/sda/queue/scheduler
+echo noop > /sys/block/sdf/queue/scheduler
+
+
+############################################################################################
+#Remove all SIO RPMS  {not the GW} 
+#
+################################################################################################
+
+ssh root@172.31.70.221 'bash -s' < UninstallSIO.sh
+ssh root@172.31.70.222 'bash -s' < UninstallSIO.sh 
+ssh root@172.31.70.223 'bash -s' < UninstallSIO.sh 
+ssh root@172.31.70.224 'bash -s' < UninstallSIO.sh 
+ssh root@172.31.70.225 'bash -s' < UninstallSIO.sh 
+ssh root@172.31.70.226 'bash -s' < UninstallSIO.sh 
+ssh root@172.31.70.227 'bash -s' < UninstallSIO.sh
+ssh root@172.31.70.228 'bash -s' < UninstallSIO.sh 
+
+
+###########################################################################################
+#Add new SDS and their Drives  
+#
+################################################################################################
+
+scli --add_sds_device --sds_ip 172.31.70.221 --storage_pool_name POOL1 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd/,dev/sde,/dev/sdf
+
+scli --add_sds --sds_ip 172.31.70.221 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds1
+scli --add_sds --sds_ip 172.31.70.222 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds2
+scli --add_sds --sds_ip 172.31.70.223 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds3
+scli --add_sds --sds_ip 172.31.70.224 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds4
+scli --add_sds --sds_ip 172.31.70.225 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds5
+scli --add_sds --sds_ip 172.31.70.226 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds6
+scli --add_sds --sds_ip 172.31.70.227 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds7
+scli --add_sds --sds_ip 172.31.70.228 --device_path /dev/sda,/dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf --storage_pool_name POOL1 --protection_domain_name PD1 --sds_name sds8
+
+
+
+
+
+
+#################################################################################################
+#FIO , example command 
+#
+#
+#############################################################################################3
+
+fio --filename=/dev/scinia --name=randreadA --ioengine=libaio  --iodepth=16 --rw=randrw --rwmixread=70 --bs=16k --direct=1 --size=16G --numjobs=8 --runtime=22240 --group_reporting
+
+
+
+
+####################################################################################
+#SYSLOG SERVER 
+#
+##############################################################################3
+
+scli --start_remote_syslog --remote_syslog_server_ip 172.31.240.198 --remote_syslog_server_port 9040 --syslog_facility 16 --attach_event_code
+
+
+
+#############################################################
+#Volumes
+##################################################################3
+
+scli --add_volume --protection_domain_name PD1 --storage_pool_name POOL1 --volume_name vol8 --size_gb 8 --thin_provisioned --dont_use_rmcache
+scli --map_volume_to_sdc --sdc_ip 172.31.70.193 --volume_name VOL0003 --allow_multi_map
+scli --query_all_volumes
+scli --query_volume --volume_name VOL0000
+scli --unmap_volume_from_sdc --sdc_ip 172.31.70.193 --volume_name VOL0000
+
+
+###################################################################
+#AD Integration
+#
+################################################################################3
+
+Install OPEN LDAP 
+First run this    Scli --set_user_authentication_method native_authentication
+And then run this Scli --set_user_authentication_method native_and_ldap_authentication
+ 
+
+
+I would start with adding users locally first, see that you’re good on that, 
+Then you want to look for setting the Scli --set_user_authentication_method [see my notes on that]
+Another very important thing is:  If you add more Roles to that Ldap account you should be able to log in via GUI as well remember, domain account need to be part of several roles [not like local account] 
+
+Example:
+#scli --assign_ldap_groups_to_roles --ldap_service_name sdslab --FrontEndConfigure_role_dn "CN=siogroup,CN=Users,DC=sdslab,DC=ad"
+#scli --assign_ldap_groups_to_roles --ldap_service_name sdslab --BackEndConfigure_role_dn "CN=siogroup,CN=Users,DC=sdslab,DC=ad"
+#scli --assign_ldap_groups_to_roles --ldap_service_name sdslab --Administrator_role_dn "CN=siogroup,CN=Users,DC=sdslab,DC=ad"
+#scli --assign_ldap_groups_to_roles --ldap_service_name sdslab --Monitor_role_dn "CN=siogroup,CN=Users,DC=sdslab,DC=ad"
+
+------------------------------------------------------------
+System has 1 configured LDAP services
+------------------------------------------------------------
+LDAP service ID: 0ef5c3f500000000
+LDAP service name: sdslab
+LDAP service URI: ldap://192.168.1.253
+Users base DN: cn=users,dc=sdslab,dc=ad
+User search filter: (&(objectClass=user)(sAMAccountName=<USER>)(memberOf:1.2.840.113556.1.4.1941:=<GROUP>))
+LDAP service has 4 configured groups.
+        Role: Monitor
+        Group DN: CN=siogroup,CN=Users,DC=sdslab,DC=ad
+        Role: FrontEndConfigure
+        Group DN: CN=siogroup,CN=Users,DC=sdslab,DC=ad
+        Role: BackEndConfigure
+        Group DN: CN=siogroup,CN=Users,DC=sdslab,DC=ad
+        Role: Administrator
+        Group DN: CN=siogroup,CN=Users,DC=sdslab,DC=ad
+------------------------------------------------------------
+ 
+
+
+ 
+ 
+ 
+ #########################################################################
+ #   LOG'S 
+ #
+ #########################################################################
+ 
+ cd /opt/emc/scaleio/mdm/diag
+ cd /opt/emc/scaleio/sds/diag
+ cd /opt/emc/scaleio/sdc/diag
+ ./get_info.sh -u admin -p P@ssw0rd -r
+ 
+ send to emc
+ /var/log
+ 
+ 
+ ###############################################################
+ #Rebalance rebuild 
+ #   --i_am_sure for disable 
+ ###############################################################
+ 
+ 
+ scli --set_rebalance_mode --protection_domain_name PD1 --storage_pool_name POOL1 --enable_rebalance
+ scli --set_rebalance_policy --protection_domain_name PD1 --storage_pool_name POOL1 --policy favor_application_io --bandwidth_limit 5120
+ 
+ scli --set_rebuild_mode --protection_domain_name PD1 --storage_pool_name POOL1 --enable_rebuild
+ scli --set_rebuild_policy --protection_domain_name PD1 --storage_pool_name POOL1 --policy favor_application_io --bandwidth_limit 5120
+ 
+ 
+
+
+
+
+
+ ###############################################################
+ #   VMWare ESX 
+ ###############################################################
+esxcli network ip interface list
+esxcli network ip connection list
+esxcli network ip interface ipv4 get
+esxcli hardware memory get
+esxcli hardware cpu list
+
+
+esxcli software acceptance set --level=PartnerSupported
+esxcli software vib install -d /tmp/sdc-2.0.11000.115-esx6.0.zip
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+[root@92N-13:~] esxcli software vib install -d /tmp/sdc-2.0.11000.115-esx6.0.zip
+Installation Result
+   Message: The update completed successfully, but the system needs to be rebooted for the changes to be effective.
+   Reboot Required: true
+   VIBs Installed: EMC_bootbank_scaleio-sdc-esx6.0_2.0-11000.115
+   VIBs Removed:
+   VIBs Skipped:
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++==
+
+https://www.guidgen.com/
+
+esxcli system module parameters set -m scini -p "IoctlIniGuidStr=9e5136be-656b-4a5f-99f7-986e4941037f IoctlMdmIPStr=192.168.210.211,172.17.210.211,192.168.210.212,172.17.210.212"
+
+/bin/auto-backup.sh
+
+esxcli system module load -m scini
+
+esxcli software vib list | less
+
+ls /vmfs/devices/disks/
+
+esxcli storage san fc list
+
+
+vmkping -d 192.168.210.211
+vmkping -I vmk1 192.168.210.211
+
+
+
+
+
+
+
+ 
+ 
