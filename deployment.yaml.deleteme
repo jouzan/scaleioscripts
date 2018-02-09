@@ -1,0 +1,98 @@
+- name: ScaleIO deployment
+  hosts: scaleio
+  tasks:
+    - name: Update OS
+      yum: name=* state=latest
+
+
+    - name: Copy ScaleIO rpm files
+      copy:
+        src: /root/{{ item }}
+        dest: /root/ 
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sds-2.0-13000.211.el7.x86_64.rpm'
+
+    - name: Install ScaleIO rpm files
+      environment:
+        TOKEN: 'P@ssw0rd'
+      yum: 
+        name: "{{ item }}"
+        state: installed
+      with_items:
+        - '/root/EMC-ScaleIO-sds-2.0-13000.211.el7.x86_64.rpm'
+        - '/root/EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64.rpm'
+
+- name: ScaleIO install mdm primary master
+  hosts: scaleio-install-mdm12
+  environment:
+    MDM_ROLE_IS_MANAGER: 1
+  tasks:
+    - name: ScaleIO install mdm primary master
+      yum: 
+        name: "{{ item }}"
+        state: installed
+      with_items:
+        - '/root/EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm'
+        - '/root/EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm'
+
+
+- name: ScaleIO install mdm tie breaker
+  hosts: scaleio-install-mdm-3
+  environment:
+    MDM_ROLE_IS_MANAGER: 0 
+  tasks:
+    - name: ScaleIO install mdm tie breaker
+      yum: 
+        name: /root/EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm 
+
+- name: ScaleIO cluster configuration
+  hosts: scaleio-sio-configuration
+  environment:
+    SDS1DATAIPS: '10.10.10.151,10.10.20.151' 
+    SDS2DATAIPS: '10.10.10.152,10.10.20.152'  
+    SDS3DATAIPS: '10.10.10.153,10.10.20.153'  
+    SDS4DATAIPS: '10.10.10.154,10.10.20.154'
+    SDS1MGMTIP: '192.168.0.151'
+    SDS2MGMTIP: '192.168.0.152'
+  tasks:
+    - name: ScaleIO cluster configuration
+      shell: | 
+        scli --create_mdm_cluster --master_mdm_ip "$SDS1DATAIPS" --master_mdm_management_ip "$SDS1MGMTIP" --master_mdm_name mdm1 --accept_license --use_nonsecure_communication
+        sleep 4 
+        scli --login --username admin --password admin --approve_certificate
+        scli --set_password --old_password admin --new_password P@ssw0rd 
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+        scli --add_standby_mdm --new_mdm_ip "$SDS2DATAIPS" --mdm_role manager --new_mdm_management_ip "$SDS2MGMTIP" --new_mdm_name mdm2
+        sleep 1 
+        scli --add_standby_mdm --new_mdm_ip "$SDS3DATAIPS" --mdm_role tb --new_mdm_name tb 
+        scli --switch_cluster_mode --cluster_mode 3_node --add_slave_mdm_name mdm2 --add_tb_name tb 
+        
+        sleep 10
+         
+        scli --add_protection_domain --protection_domain_name PD1
+        scli --add_storage_pool --protection_domain_name PD1 --storage_pool_name POOL1
+
+        scli --set_performance_parameters  --all_sds --all_sdc --apply_to_mdm --profile high_performance
+        scli --rename_system --new_name SIOSYSTEM
+        sleep 2
+
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+        scli --add_sds --sds_ip "$SDS1DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds1
+        sleep 3
+        scli --add_sds --sds_ip "$SDS2DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds2
+        sleep 3
+        scli --add_sds --sds_ip "$SDS3DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds3
+        sleep 3
+        scli --add_sds --sds_ip "$SDS4DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds4
+
+        
+        sleep 20 
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+
+        scli --add_volume --protection_domain_name PD1 --storage_pool_name POOL1 --size_gb 8 --volume_name VOL001
+        scli --add_volume --protection_domain_name PD1 --storage_pool_name POOL1 --size_gb 8 --volume_name VOL002
+        scli --add_volume --protection_domain_name PD1 --storage_pool_name POOL1 --size_gb 16 --volume_name VOL003
+

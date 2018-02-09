@@ -1,0 +1,16 @@
+- name: remove SIO Packages
+  hosts: all-sio-servers
+  tasks:
+    - name: remove packges deb
+      shell: | 
+        dpkg --remove emc-scaleio-lia
+        sleep 3
+        dpkg --remove emc-scaleio-sds
+        sleep 3
+        dpkg --remove emc-scaleio-mdm
+        sleep 3
+        reboot
+
+
+
+

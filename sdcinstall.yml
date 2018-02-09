@@ -1,0 +1,38 @@
+- name: ScaleIO sdc deployment
+  hosts: all-sdc-servers
+  tasks:
+    - name: Copy ScaleIO rpm files
+      copy:
+        src: /root/ScaleIO2.0.1.3Install/{{ item }}
+        dest: /tmp/ 
+      with_items:
+        - 'EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64.rpm'
+
+    - name: Install ScaleIO sdc rpm file
+      environment:
+        MDM_IP: '172.31.240.34,172.31.240.59'
+      yum: 
+        name: "{{ item }}"
+        state: installed
+      with_items:
+        - '/tmp/EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64.rpm'
+
+
+- name: mapp volumes to sdc
+  hosts: Primary-MDM
+  environment:
+    VOL1: 'VOL001' 
+    VOL2: 'VOL002'
+    VOL3: 'VOL003'
+    VOL4: 'VOL004'  
+    PD: 'PD1'
+    POOL: 'POOL1'
+    SDC1: '172.31.240.34'
+  tasks:
+    - name: mapp volumes to each sdc 
+      shell: | 
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+        sleep 1 
+        scli --map_volume_to_sdc --sdc_ip "$SDC1" --protection_domain_name "$PD" --storage_pool_name "$POOL" --volume_name "$VOL1"
+        scli --map_volume_to_sdc --sdc_ip "$SDC1" --protection_domain_name "$PD" --storage_pool_name "$POOL" --volume_name "$VOL2"
+        scli --map_volume_to_sdc --sdc_ip "$SDC1" --protection_domain_name "$PD" --storage_pool_name "$POOL" --volume_name "$VOL3"

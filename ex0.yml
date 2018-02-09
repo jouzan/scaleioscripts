@@ -1,0 +1,15 @@
+- name: StepByStep using Ansible  
+  hosts:  all-sio-servers
+  tasks:
+    - name: Remove SIO RPMS 
+      yum:
+        name: "{{ item }}"
+        state: absent
+      with_items:
+       - 'EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64'
+       - 'EMC-ScaleIO-sds-2.0-13000.211.el7.x86_64'
+       - 'EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64'
+       - 'EMC-ScaleIO-mdm-2.0-14000.231.el7.x86_64'
+       - 'EMC-ScaleIO-lia-2.0-14000.231.el7.x86_64'
+       - 'EMC-ScaleIO-sds-2.0-14000.231.el7.x86_64'
+       - 'EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64'

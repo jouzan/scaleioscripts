@@ -1,0 +1,19 @@
+- name: StepByStep using Ansible
+  hosts: all-servers
+  tasks:
+    - name: Copy files to all servers
+      copy:
+        src: /root/{{ item }}
+        dest: /root/
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64.rpm'
+
+
+    - name: Create Datacenter
+      local_action:
+        module: vmware_datacenter
+        hostname: "{{ vcenter }}"
+        username: administrator@vsphere.local
+        password: P@ssw0rd
+        datacenter_name: "enter"
+        state: present

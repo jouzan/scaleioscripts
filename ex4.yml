@@ -1,0 +1,55 @@
+- name: StepByStep using Ansible  
+  hosts: all-servers
+  tasks:
+    - name: Copy files to all servers 
+      copy:
+        src: /root/{{ item }}
+        dest: /root/
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sds-2.0-13000.211.el7.x86_64.rpm'
+
+
+- name: StepByStep using Ansible
+  hosts: all-servers
+  tasks:
+    - name: add user
+      user:
+        name: jones
+        comment: "jones uzan"
+        uid: 1040
+        group: root
+
+
+
+- name: StepByStep using Ansible
+  hosts: all-servers 
+  tasks:
+    - name: Install HTTPD 
+      yum:
+       name: httpd
+       state: latest
+
+
+- name: StepByStep using Ansible
+  hosts: all-servers
+  tasks:
+    - name: restart and reload HTTPD service  
+      systemd:
+         name: httpd
+         enabled: yes
+         state: restarted
+         daemon_reload: yes
+
+- name: StepByStep using Ansible
+  hosts: all-servers
+  environment:
+    VAR001: '10.10.10.151'
+  tasks:
+    - name: Run shell commands Just like bash scripting
+      shell: |
+
+        touch /tmp/file001
+        tuch /tmp/file0002 

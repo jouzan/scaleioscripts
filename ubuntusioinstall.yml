@@ -1,0 +1,100 @@
+- name: COPY SIO RPMS AND INSTALL SDS LIA
+  hosts: all-sio-servers
+  tasks:
+    - name: COPY SIO RPMS
+      copy:
+        src: /root/{{ item }}
+        dest: /root/ 
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+        - 'EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+        - 'EMC-ScaleIO-sds-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+
+    - name: Install ScaleIO lia rpm files
+      environment:
+        TOKEN: 'P@ssw0rd'
+      shell: | 
+        dpkg -i /root/EMC-ScaleIO-lia-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+
+    - name: Install ScaleIO sds rpm files
+      shell: |
+        dpkg -i /root/EMC-ScaleIO-sds-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+
+
+
+- name: INSTALL MDM1 and MDM2
+  hosts: scaleio-install-mdm12
+  environment:
+    MDM_ROLE_IS_MANAGER: 1
+  tasks:
+    - name: INSTALL MDM1 and MDM2 
+      shell: |
+        dpkg -i /root/EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+- name: INSTALL TB
+  hosts: scaleio-install-TB
+  environment:
+    MDM_ROLE_IS_MANAGER: 0 
+  tasks:
+    - name: INSTALL TB
+      shell: |
+        dpkg -i /root/EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb 
+
+
+
+- name: SIO CLUSTER CONFIG
+  hosts: Primary-MDM
+  environment:
+    SDS1DATAIPS: '10.100.100.201,10.200.200.201' 
+    SDS2DATAIPS: '10.100.100.202,10.200.200.202'  
+    SDS3DATAIPS: '10.100.100.203,10.200.200.203'  
+    SDS4DATAIPS: '10.100.100.204,10.200.200.204'  
+    SDS1MGMTIP: '172.31.240.82'
+    SDS2MGMTIP: '172.31.240.83'
+  tasks:
+    - name: ScaleIO cluster configuration
+      shell: | 
+        scli --create_mdm_cluster --master_mdm_ip "$SDS1DATAIPS" --master_mdm_management_ip "$SDS1MGMTIP" --master_mdm_name mdm1 --accept_license --use_nonsecure_communication
+        sleep 4 
+        scli --login --username admin --password admin --approve_certificate
+        scli --set_password --old_password admin --new_password P@ssw0rd 
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+        scli --add_standby_mdm --new_mdm_ip "$SDS2DATAIPS" --mdm_role manager --new_mdm_management_ip "$SDS2MGMTIP" --new_mdm_name mdm2
+        sleep 3
+        scli --add_standby_mdm --new_mdm_ip "$SDS3DATAIPS" --mdm_role tb --new_mdm_name tb 
+        scli --switch_cluster_mode --cluster_mode 3_node --add_slave_mdm_name mdm2 --add_tb_name tb 
+        
+        sleep 2
+         
+        scli --add_protection_domain --protection_domain_name PD1
+        scli --add_storage_pool --protection_domain_name PD1 --storage_pool_name POOL1
+        sleep 2       
+        scli --set_performance_parameters  --all_sds --all_sdc --apply_to_mdm --profile high_performance
+        scli --rename_system --new_name SIOSYSTEM
+        sleep 2
+
+        scli --login --username admin --password P@ssw0rd --approve_certificate
+        scli --add_sds --sds_ip "$SDS1DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds1 --i_am_sure
+        sleep 20
+        scli --add_sds --sds_ip "$SDS2DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds2 --i_am_sure
+        sleep 20
+        scli --add_sds --sds_ip "$SDS3DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds3 --i_am_sure
+        sleep 20
+        scli --add_sds --sds_ip "$SDS4DATAIPS" --device_path "/dev/sdb,/dev/sdc" --protection_domain_name PD1 --storage_pool_name POOL1 --sds_name sds3 --i_am_sure
+
+
+
+        scli --add_volume --protection_domain_name PD1 --storage_pool_name POOL1 --size_gb 8 --volume_name vol001
+        sleep 10
+
+
+
+- name: send mail
+  hosts: Ansible
+  tasks:
+    - name: Send mail
+      shell: |
+        echo "SIO Install Cluster configured" | mail -s "SIO Clsuter configured volumes provisioned" administrator@testlab.ad
+

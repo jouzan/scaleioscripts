@@ -1,0 +1,40 @@
+- name: COPY SIO RPMS AND INSTALL SDS LIA
+  hosts: all-sio-servers
+  tasks:
+    - name: COPY SIO RPMS
+      copy:
+        src: /root/{{ item }}
+        dest: /tmp/ 
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+        - 'EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+        - 'EMC-ScaleIO-sds-2.0-14000.231.Ubuntu.16.04.x86_64.deb'
+
+    - name: Install ScaleIO lia rpm files
+      shell: | 
+        export TOKEN=P@ssw0rd
+        dpkg -i /tmp/EMC-ScaleIO-lia-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+
+    - name: Install ScaleIO sds rpm files
+      shell: |
+        dpkg -i /tmp/EMC-ScaleIO-sds-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+
+- name: INSTALL MDM1 and MDM2
+  hosts: scaleio-install-mdm12
+  tasks:
+    - name: INSTALL MDM1 and MDM2 
+      shell: |
+        export MDM_ROLE_IS_MANAGER=1
+        dpkg -i /tmp/EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb
+
+
+- name: INSTALL TB
+  hosts: scaleio-install-TB
+  tasks:
+    - name: INSTALL TB
+      shell: |
+        export MDM_ROLE_IS_MANAGER=0
+        dpkg -i /tmp/EMC-ScaleIO-mdm-2.0-14000.231.Ubuntu.16.04.x86_64.deb 
+

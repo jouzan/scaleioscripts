@@ -1,0 +1,23 @@
+- name: StepByStep using Ansible  
+  hosts: all-servers
+  tasks:
+    - name: Copy files to all servers 
+      copy:
+        src: /root/{{ item }}
+        dest: /root/
+      with_items:
+        - 'EMC-ScaleIO-lia-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-mdm-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sdc-2.0-13000.211.el7.x86_64.rpm'
+        - 'EMC-ScaleIO-sds-2.0-13000.211.el7.x86_64.rpm'
+
+
+- name: StepByStep using Ansible
+  hosts: all-servers
+  tasks:
+    - name: add user
+      user:
+        name: jones
+        comment: "jones uzan"
+        uid: 1040
+        group: root

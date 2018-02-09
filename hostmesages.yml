@@ -1,0 +1,13 @@
+- name: Messages
+  hosts: all-sio-servers
+  tasks:
+    - name: Display all variables/facts known for a host
+      debug:
+
+
+- name: send mail
+  hosts: Ansible
+  tasks:
+    - name: Send mail 
+      shell: |
+        echo "FinishHostCheck" | mail -s "Host Check" administrator@testlab.ad 

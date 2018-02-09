@@ -1,0 +1,5 @@
+- name: Update OS 
+  hosts: scaleio
+  tasks:
+   - name: Update All OS
+     yum: name=* state=latest

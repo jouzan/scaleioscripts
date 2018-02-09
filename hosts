@@ -1,0 +1,14 @@
+[scaleio]
+192.168.0.151
+192.168.0.152
+192.168.0.153
+
+[scaleio-install-mdm12]
+192.168.0.151
+192.168.0.152
+
+[scaleio-install-mdm-3]
+192.168.0.153
+
+[scaleio-sio-configuration]
+192.168.0.151
